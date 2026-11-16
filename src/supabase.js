@@ -19,6 +19,18 @@ export async function loginConGoogle() {
   if (error) throw error;
 }
 
+// Login temporal con correo y contraseña (solo para pruebas)
+export async function loginConEmail(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+}
+
+export async function registrarConEmail(email, password) {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
+}
+
 export async function cerrarSesion() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;

@@ -3,6 +3,8 @@ import {
   supabase,
   configOk,
   loginConGoogle,
+  loginConEmail,
+  registrarConEmail,
   cerrarSesion,
   guardarPartida,
   obtenerHistorial,
@@ -12,6 +14,9 @@ import { Memoria, PAREJAS, TIEMPO_LIMITE } from './game.js';
 const app = document.getElementById('app');
 let usuario = null;
 let juego = null;
+
+// Cambia a true para mostrar el botón de Google (obligatorio en la entrega final)
+const USAR_GOOGLE = true;
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -51,23 +56,61 @@ function vistaConfigFalta() {
   </section>`);
 }
 
-function vistaLogin(error = '') {
+function vistaLogin(error = '', info = '') {
+  const google = USAR_GOOGLE
+    ? `<button id="btn-google" class="btn primary big">Entrar con Google</button>`
+    : '';
+  const form = USAR_GOOGLE
+    ? ''
+    : `<form id="form-login" class="form">
+        <input id="email" type="email" placeholder="Correo" autocomplete="email" required />
+        <input id="password" type="password" placeholder="Contraseña (mín. 6)" autocomplete="current-password" minlength="6" required />
+        <div class="botones">
+          <button type="submit" class="btn primary">Entrar</button>
+          <button type="button" id="btn-registro" class="btn">Crear cuenta</button>
+        </div>
+      </form>`;
   layout(`<section class="card center">
     <h2>La caja fuerte digital</h2>
     <p>Inicia sesión para jugar y guardar tus partidas.</p>
     ${error ? `<p class="error">${esc(error)}</p>` : ''}
-    <button id="btn-google" class="btn primary big">
-      <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
-      Entrar con Google
-    </button>
+    ${info ? `<p class="estado ok">${esc(info)}</p>` : ''}
+    ${google}
+    ${form}
   </section>`);
-  document.getElementById('btn-google').addEventListener('click', async () => {
+
+  document.getElementById('btn-google')?.addEventListener('click', async () => {
     try {
       await loginConGoogle();
     } catch (e) {
       vistaLogin(e.message);
     }
   });
+
+  const f = document.getElementById('form-login');
+  if (f) {
+    const datos = () => [
+      document.getElementById('email').value.trim(),
+      document.getElementById('password').value,
+    ];
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      try {
+        await loginConEmail(...datos());
+      } catch (e) {
+        vistaLogin(e.message);
+      }
+    });
+    document.getElementById('btn-registro').addEventListener('click', async () => {
+      if (!f.reportValidity()) return;
+      try {
+        const r = await registrarConEmail(...datos());
+        if (!r.session) vistaLogin('', 'Cuenta creada. Revisa tu correo para confirmarla y entra.');
+      } catch (e) {
+        vistaLogin(e.message);
+      }
+    });
+  }
 }
 
 function vistaInicio() {
